@@ -4,6 +4,8 @@ import string
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
 
 class MessengerServer:
     def __init__(self, server_signing_key, server_decryption_key):
@@ -28,6 +30,7 @@ class MessengerClient:
         self.certs = {}
         self.private_k = ""
         self.public_k = ""
+        self.
 
     def generateCertificate(self):
         self.private_k = ec.generate_private_key(ec.SECP256R1())
@@ -45,7 +48,14 @@ class MessengerClient:
         
 
     def sendMessage(self, name, message):
-        raise Exception("not implemented!")
+        shared_k = self.private_k.exchange(load_pem_public_key(self.certs[name][:178], 'default_backend()'))
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32,
+            info=shared_k,
+        )
+        key = hkdf.derive()
+
         return
 
     def receiveMessage(self, name, header, ciphertext):
