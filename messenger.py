@@ -2,14 +2,15 @@ import os
 import pickle
 import string
 
+
 class MessengerServer:
     def __init__(self, server_signing_key, server_decryption_key):
         self.server_signing_key = server_signing_key
         self.server_decryption_key = server_decryption_key
 
     def decryptReport(self, ct):
-        raise Exception("not implemented!")
-        return
+        pt = dec_elgamal(ct)
+        return pt
 
     def signCert(self, cert):
         raise Exception("not implemented!")
@@ -41,5 +42,21 @@ class MessengerClient:
         return
 
     def report(self, name, message):
-        raise Exception("not implemented!")
-        return
+        ct = self.enc_elgamal(name, message)
+        return ct
+    
+    def enc_elgamal(self, name, message):
+        pk = serialization.load_pem_public_key(server_encryption_pk) #serialize key here
+        print(pk)
+        for i in range(0,len(message)):
+            ct[i]= pk*ord(ct[i])
+        return ct
+    def dec_elgamal(self, ciphertext):
+        sk = serialization.load_pem_private_key(server_decryption_key) #deserialize key here
+        print(sk)
+        for i in range(0,len(ciphertext)):
+            pt.append(chr(int(ciphertext[i]/sk)))
+        
+        return name,pt
+    
+
