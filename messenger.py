@@ -17,11 +17,11 @@ class MessengerServer:
 
 class MessengerClient:
 
-    def __init__(self, name, server_signing_pk, server_encryption_pk):
+    def __init__(self, name, server_signing_pk, server_encryption_pk):  #only need to remember the most recent chain key
         self.name = name
         self.server_signing_pk = server_signing_pk
         self.server_encryption_pk = server_encryption_pk
-        self.conns = {}
+        self.conns = {} # store DH keys per convo here
         self.certs = {}
         self.private_k = ""
         self.public_k = ""
@@ -58,19 +58,24 @@ class MessengerClient:
         return
 
     def report(self, name, message):
-        ct = self.enc_elgamal(name, message)
+        ct = self.enc_elgamal(name, message) 
         return ct
     
-    def enc_elgamal(self, name, message): #how to include name?
+    def enc_elgamal(self, name, message): #how to include name? A: as a tuple, pickle ####change to hashed elgamal
         pk = serialization.load_pem_public_key(server_encryption_pk) #serialize key here
         print(pk)   #check
         for i in range(0,len(message)):
             ct[i]= pk*ord(ct[i])
-        return ct
+        digest = hashes.Hash(hashes.SHA256())
+        digest.update(ct)
+        k = digest.finalize()
+        ##AESGCM
+        return ct, tag
 
-    def dec_elgamal(self, ciphertext):
+    def dec_elgamal(self, ciphertext): ##use 
         sk = serialization.load_pem_private_key(server_decryption_key) #deserialize key here
         print(sk)   #check
+        ##add verify part
         for i in range(0,len(ciphertext)):
             pt.append(chr(int(ciphertext[i]/sk)))
         
