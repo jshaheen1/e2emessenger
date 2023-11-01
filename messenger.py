@@ -1,6 +1,12 @@
 import os
 import pickle
 import string
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 class MessengerServer:                                          
     def __init__(self, server_signing_key, server_decryption_key):
@@ -44,14 +50,14 @@ class MessengerClient:
 
     def sendMessage(self, name, message):
         try:
-            shared_k = self.private_k.exchange(load_pem_public_key(self.certs[name][:178], 'default_backend()'))
-        
-            k = self.symm_rat(self.server_encryption_pk, shared_k) #what abt multiple messages in a row? how to save the chain key?
-            chain_k = k[:255]   
+            shared_k = self.private_k.exchange(load_pem_public_key(self.certs[name][:178], 'default_backend()')) ## move this to cert
+            shared_k = 
+            k = self.symm_rat(self.server_encryption_pk, shared_k)
+            self.cert[name,] = k[:255]   
             message_k = k[256:] # confirm in OH abt key length and gen
 
             aesgcm = AESGCM(message_k)
-            nonce = os.urandom(16) # include in header?
+            nonce = bytearray(16)
             
             ct = aesgcm.encrypt(nonce, message)
             return nonce, ct
@@ -66,7 +72,7 @@ class MessengerClient:
             chain_k, message_k =  self.symm_rat(self.server_encryption_pk, shared_k)    # confirm in OH abt key length and gen
 
             aesgcm = AESGCM(message_k)
-            nonce = #seperate nonce and tag?
+            nonce = bytearray(16)
             pt = aesgcm.decrypt(nonce, ciphertext)
             return pt
         except Exception as e:
@@ -79,7 +85,7 @@ class MessengerClient:
         return ct
     
     def enc_elgamal(self, name, message): #how to include name? A: as a tuple, pickle ####change to hashed elgamal
-        pk = serialization.load_pem_public_key(server_encryption_pk) #serialize key here
+        pk = serialization.load_pem_public_key(self.server_encryption_pk) #serialize key here
         print(pk)   #check
         for i in range(0,len(message)):
             ct[i]= pk*ord(ct[i])
@@ -97,3 +103,20 @@ class MessengerClient:
             pt.append(chr(int(ciphertext[i]/sk)))
         
         return pt
+    
+    def symm_rat(self, root_key, constant):
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32,
+            info=root_key,
+            salt=None
+        )
+        chain_key = hkdf.derive(constant)
+        message_key = hkdf.derive(chain_key) ##????????? is this the right way????????? other options: truncating the key in half, sha-256 the key??
+        return chain_key, message_key
+
+class Certificate:
+    def __init__(self, ecpk, name):
+        self.ecpk = ecpk
+        self.name = name
+        
