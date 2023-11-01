@@ -25,7 +25,7 @@ class MessengerClient:
         self.certs = {}
         self.private_k = ""
         self.public_k = ""
-        self.
+        #self.
 
     def generateCertificate(self):
         self.private_k = ec.generate_private_key(ec.SECP256R1())
@@ -58,5 +58,20 @@ class MessengerClient:
         return
 
     def report(self, name, message):
-        raise Exception("not implemented!")
-        return
+        ct = self.enc_elgamal(name, message)
+        return ct
+    
+    def enc_elgamal(self, name, message): #how to include name?
+        pk = serialization.load_pem_public_key(server_encryption_pk) #serialize key here
+        print(pk)   #check
+        for i in range(0,len(message)):
+            ct[i]= pk*ord(ct[i])
+        return ct
+
+    def dec_elgamal(self, ciphertext):
+        sk = serialization.load_pem_private_key(server_decryption_key) #deserialize key here
+        print(sk)   #check
+        for i in range(0,len(ciphertext)):
+            pt.append(chr(int(ciphertext[i]/sk)))
+        
+        return pt
