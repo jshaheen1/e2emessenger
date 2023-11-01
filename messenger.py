@@ -1,6 +1,9 @@
 import os
 import pickle
 import string
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
 
 class MessengerServer:
     def __init__(self, server_signing_key, server_decryption_key):
@@ -12,8 +15,8 @@ class MessengerServer:
         return
 
     def signCert(self, cert):
-        raise Exception("not implemented!")
-        return
+        signature = self.server_signing_key.sign(cert, ec.ECDSA(hashes.SHA256()))
+        return signature
 
 class MessengerClient:
 
@@ -23,14 +26,23 @@ class MessengerClient:
         self.server_encryption_pk = server_encryption_pk
         self.conns = {}
         self.certs = {}
+        self.private_k = ""
+        self.public_k = ""
 
     def generateCertificate(self):
-        raise Exception("not implemented!")
-        return
+        self.private_k = ec.generate_private_key(ec.SECP256R1())
+        self.public_k = self.private_k.public_key()
+        return self.public_k.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo) + self.name.encode('utf-8')
 
     def receiveCertificate(self, certificate, signature):
-        raise Exception("not implemented!")
-        return
+        try:
+            self.server_signing_pk.verify(signature, certificate, ec.ECDSA(hashes.SHA256()))
+            self.certs[certificate[178:].decode('utf-8')] = certificate
+        except Exception as e:
+            print(f"An exception of type {type(e).__name__} occurred: {e}")
+            raise(e)
+            
+        
 
     def sendMessage(self, name, message):
         raise Exception("not implemented!")
@@ -43,3 +55,9 @@ class MessengerClient:
     def report(self, name, message):
         raise Exception("not implemented!")
         return
+    
+class Certificate:
+    def __init__(self, ecpk, name):
+        self.ecpk = ecpk
+        self.name = name
+    
