@@ -2,7 +2,6 @@ import os
 import pickle
 import string
 
-
 class MessengerServer:
     def __init__(self, server_signing_key, server_decryption_key):
         self.server_signing_key = server_signing_key
@@ -13,8 +12,8 @@ class MessengerServer:
         return pt
 
     def signCert(self, cert):
-        raise Exception("not implemented!")
-        return
+        signature = self.server_signing_key.sign(cert, ec.ECDSA(hashes.SHA256()))
+        return signature
 
 class MessengerClient:
 
@@ -24,17 +23,34 @@ class MessengerClient:
         self.server_encryption_pk = server_encryption_pk
         self.conns = {}
         self.certs = {}
+        self.private_k = ""
+        self.public_k = ""
+        self.
 
     def generateCertificate(self):
-        raise Exception("not implemented!")
-        return
+        self.private_k = ec.generate_private_key(ec.SECP256R1())
+        self.public_k = self.private_k.public_key()
+        return self.public_k.public_bytes(encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo) + self.name.encode('utf-8')
 
     def receiveCertificate(self, certificate, signature):
-        raise Exception("not implemented!")
-        return
+        try:
+            self.server_signing_pk.verify(signature, certificate, ec.ECDSA(hashes.SHA256()))
+            self.certs[certificate[178:].decode('utf-8')] = certificate
+        except Exception as e:
+            print(f"An exception of type {type(e).__name__} occurred: {e}")
+            raise(e)
+            
+        
 
     def sendMessage(self, name, message):
-        raise Exception("not implemented!")
+        shared_k = self.private_k.exchange(load_pem_public_key(self.certs[name][:178], 'default_backend()'))
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32,
+            info=shared_k,
+        )
+        key = hkdf.derive()
+
         return
 
     def receiveMessage(self, name, header, ciphertext):
@@ -42,21 +58,5 @@ class MessengerClient:
         return
 
     def report(self, name, message):
-        ct = self.enc_elgamal(name, message)
-        return ct
-    
-    def enc_elgamal(self, name, message):
-        pk = serialization.load_pem_public_key(server_encryption_pk) #serialize key here
-        print(pk)
-        for i in range(0,len(message)):
-            ct[i]= pk*ord(ct[i])
-        return ct
-    def dec_elgamal(self, ciphertext):
-        sk = serialization.load_pem_private_key(server_decryption_key) #deserialize key here
-        print(sk)
-        for i in range(0,len(ciphertext)):
-            pt.append(chr(int(ciphertext[i]/sk)))
-        
-        return name,pt
-    
-
+        raise Exception("not implemented!")
+        return
