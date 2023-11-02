@@ -111,7 +111,6 @@ class MessengerClient:
         except Exception as e:
             print(f"Encryption Failed")
             raise(e)
-        """
 
     def receiveMessage(self, name, header, ciphertext):
         try:
@@ -153,31 +152,42 @@ class MessengerClient:
             raise(e)
         
 
-    """def report(self, name, message):
-        ct = self.enc_elgamal(name, message) 
-        return ct"""
+    def report(self, name, message):
+        u, ct = self.enc_elgamal(name, message) 
+        return u, ct
     
-    """def enc_elgamal(self, name, message): #how to include name? A: as a tuple, pickle ####change to hashed elgamal
-        pk = serialization.load_pem_public_key(self.server_encryption_pk) #serialize key here
-        print(pk)   #check
-        for i in range(0,len(message)):
-            ct[i]= pk*ord(ct[i])
+    def enc_elgamal(self, name, message): #how to include name? A: as a tuple, pickle ####change to hashed elgamal
+        
+        pt = (name,message)
+        sk = ec.generate_private_key(ec.SECP256R1())
+        u = self.sk.public_key()
+        
+        h = server_encryption_pk
+        v = self.sk.exchange(ec.ECDH(), h)
         digest = hashes.Hash(hashes.SHA256())
-        digest.update(ct)
+        digest.update(u + v) #U+V
         k = digest.finalize()
         ##AESGCM
-        return ct, tag
+        aesgcm = AESGCM(k)
+        nonce = bytearray(12)
+        ct = aesgcm.encrypt(nonce, temp)
 
-    def dec_elgamal(self, ciphertext): ##use 
-        sk = serialization.load_pem_private_key(server_decryption_key) #deserialize key here
-        print(sk)   #check
-        ##add verify part
-        for i in range(0,len(ciphertext)):
-            pt.append(chr(int(ciphertext[i]/sk)))
+        return u, ct
+
+    def dec_elgamal(self, u, ciphertext): ##use 
+
         
-        return pt"""
-    
-    def symm_rat(self, root_key, constant):
+        v = self.server_encryption_sk.exchange(ec.ECDH(), u)
+        digest = hashes.Hash(hashes.SHA256())
+        digest.update(u + v) #U+V
+        k = digest.finalize()
+
+        aesgcm = AESGCM(k)
+        nonce = bytearray(12)
+        pt = aesgcm.decrypt(nonce, ciphertext)
+        return pt.name, pt.message
+        
+def symm_rat(self, root_key, constant):
         hkdf = HKDF(
             algorithm=hashes.SHA256(),
             length=64,
