@@ -50,8 +50,8 @@ except:
 else:
     error("accepted certificate with incorrect signature")
 
-"""
-print("Testing Reporting")
+
+"""print("Testing Reporting")
 content = "inappropriate message contents"
 reportPT, reportCT = alice.report("Bob", content)
 decryptedReport = server.decryptReport(reportCT)

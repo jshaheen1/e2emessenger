@@ -60,30 +60,10 @@ class MessengerClient:
         
 
     def sendMessage(self, name, message):
-        """try:"""
-        #check to see if a message has been sent or received yet, if no use DH handshake from certs, if yes use new DH handshake
-        if len(self.conns[name][2]) == 0 and len(self.conns[name][3]) == 0:
-            k1 = self.symm_rat(self.conns[name][1], self.conns[name][1]) #k1 is gonna be output of root kdf
-
-            send_ck = k1[32:] #extract last 32 for send chain key construction
-            root_k = k1[:32] #extract first 32 for root key
-            self.conns[name][1] = root_k
-
-            k2 = self.symm_rat(send_ck, bytearray(16)) #k2 is gonna be output of send chain kdf
-            send_ck = k2[:32] #extract first 32 for storing send key
-            message_k = k2[32:] #extract last 32 for message key and encryption
-            self.conns[name][2] = send_ck
-
-        else:
-            if not self.conns[name][4]:
-                self.private_k = ec.generate_private_key(ec.SECP256R1())
-                self.public_k = self.private_k.public_key()
-                #generate new key pair
-
-
-                new_DH= self.private_k.exchange(algorithm=ec.ECDH(), peer_public_key=self.conns[name][0])
-                #new DH shared secret
-                k1 = self.symm_rat(self.conns[name][1], new_DH) #k1 is gonna be output of root kdf
+        try:
+            #check to see if a message has been sent or received yet, if no use DH handshake from certs, if yes use new DH handshake
+            if len(self.conns[name][2]) == 0 and len(self.conns[name][3]) == 0:
+                k1 = self.symm_rat(self.conns[name][1], self.conns[name][1]) #k1 is gonna be output of root kdf
 
                 send_ck = k1[32:] #extract last 32 for send chain key construction
                 root_k = k1[:32] #extract first 32 for root key
@@ -93,47 +73,52 @@ class MessengerClient:
                 send_ck = k2[:32] #extract first 32 for storing send key
                 message_k = k2[32:] #extract last 32 for message key and encryption
                 self.conns[name][2] = send_ck
+
             else:
-                k2 = self.symm_rat(self.conns[name][2], bytearray(16)) #k2 is gonna be output of send chain kdf
-                send_ck = k2[:32] #extract first 32 for storing send key
-                message_k = k2[32:] #extract last 32 for message key and encryption
-                self.conns[name][2] = send_ck
+                if not self.conns[name][4]:
+                    self.private_k = ec.generate_private_key(ec.SECP256R1())
+                    self.public_k = self.private_k.public_key()
+                    #generate new key pair
 
-        aesgcm = AESGCM(message_k)
-        nonce = bytearray(16)
 
-        message = message.encode('utf-8')
+                    new_DH= self.private_k.exchange(algorithm=ec.ECDH(), peer_public_key=self.conns[name][0])
+                    #new DH shared secret
+                    k1 = self.symm_rat(self.conns[name][1], new_DH) #k1 is gonna be output of root kdf
+
+                    send_ck = k1[32:] #extract last 32 for send chain key construction
+                    root_k = k1[:32] #extract first 32 for root key
+                    self.conns[name][1] = root_k
+
+                    k2 = self.symm_rat(send_ck, bytearray(16)) #k2 is gonna be output of send chain kdf
+                    send_ck = k2[:32] #extract first 32 for storing send key
+                    message_k = k2[32:] #extract last 32 for message key and encryption
+                    self.conns[name][2] = send_ck
+                else:
+                    k2 = self.symm_rat(self.conns[name][2], bytearray(16)) #k2 is gonna be output of send chain kdf
+                    send_ck = k2[:32] #extract first 32 for storing send key
+                    message_k = k2[32:] #extract last 32 for message key and encryption
+                    self.conns[name][2] = send_ck
+
+            aesgcm = AESGCM(message_k)
+            nonce = bytearray(16)
+
+            message = message.encode('utf-8')
+            
+            ct = aesgcm.encrypt(nonce, message, None)
+
+            self.conns[name][4] = True #maintains clients position as sender, if this is true and send message called again no need for new keys
+            return self.public_k, ct
         
-        ct = aesgcm.encrypt(nonce, message, None)
-
-        self.conns[name][4] = True #maintains clients position as sender, if this is true and send message called again no need for new keys
-        return self.public_k, ct
-        """
         except Exception as e:
-            print(f"Encryption Failed")
-            raise(e)
-        """
+            print(f"Encryption Error!")
+            return None
+        
 
     def receiveMessage(self, name, header, ciphertext):
-        """try:"""
-        if len(self.conns[name][2]) == 0 and len(self.conns[name][3]) == 0:
-            k1 = self.symm_rat(self.conns[name][1], self.conns[name][1]) #k1 is gonna be output of root kdf
-            
-            receive_ck = k1[32:] #extract last 32 for receive chain key construction
-            root_k = k1[:32] #extract first 32 for root key
-            self.conns[name][1] = root_k
-
-            k2 = self.symm_rat(receive_ck, bytearray(16)) #k2 is gonna be output of send chain kdf
-            receive_ck = k2[:32] #extract first 32 for storing send key
-            message_k = k2[32:] #extract last 32 for message key and encryption
-            self.conns[name][3] = receive_ck
-        else:
-            if self.conns[name][4] == True:
-                self.conns[name][0] = header
-                new_DH= self.private_k.exchange(algorithm=ec.ECDH(), peer_public_key=self.conns[name][0])
-                #new DH shared secret
-                k1 = self.symm_rat(self.conns[name][1], new_DH) #k1 is gonna be output of root kdf
-
+        try:
+            if len(self.conns[name][2]) == 0 and len(self.conns[name][3]) == 0:
+                k1 = self.symm_rat(self.conns[name][1], self.conns[name][1]) #k1 is gonna be output of root kdf
+                
                 receive_ck = k1[32:] #extract last 32 for receive chain key construction
                 root_k = k1[:32] #extract first 32 for root key
                 self.conns[name][1] = root_k
@@ -143,22 +128,37 @@ class MessengerClient:
                 message_k = k2[32:] #extract last 32 for message key and encryption
                 self.conns[name][3] = receive_ck
             else:
-                k2 = self.symm_rat(self.conns[name][3], bytearray(16)) #k2 is gonna be output of send chain kdf
-                receive_ck = k2[:32] #extract first 32 for storing send key
-                message_k = k2[32:] #extract last 32 for message key and encryption
-                self.conns[name][2] = receive_ck
+                if self.conns[name][4] == True:
+                    self.conns[name][0] = header
+                    new_DH= self.private_k.exchange(algorithm=ec.ECDH(), peer_public_key=self.conns[name][0])
+                    #new DH shared secret
+                    k1 = self.symm_rat(self.conns[name][1], new_DH) #k1 is gonna be output of root kdf
 
-        aesgcm = AESGCM(message_k)
-        nonce = bytearray(16)
-        pt = aesgcm.decrypt(nonce, ciphertext, None)
-        pt = pt.decode('utf-8')
+                    receive_ck = k1[32:] #extract last 32 for receive chain key construction
+                    root_k = k1[:32] #extract first 32 for root key
+                    self.conns[name][1] = root_k
 
-        self.conns[name][4] = False #identifies client as receiver of last message, to decide if new DH pair needed for send 
+                    k2 = self.symm_rat(receive_ck, bytearray(16)) #k2 is gonna be output of send chain kdf
+                    receive_ck = k2[:32] #extract first 32 for storing send key
+                    message_k = k2[32:] #extract last 32 for message key and encryption
+                    self.conns[name][3] = receive_ck
+                else:
+                    k2 = self.symm_rat(self.conns[name][3], bytearray(16)) #k2 is gonna be output of send chain kdf
+                    receive_ck = k2[:32] #extract first 32 for storing send key
+                    message_k = k2[32:] #extract last 32 for message key and encryption
+                    self.conns[name][3] = receive_ck
 
-        return pt
-        """except Exception as e:
-            print(f"Decryption Failed")
-            raise(e)"""
+            aesgcm = AESGCM(message_k)
+            nonce = bytearray(16)
+            pt = aesgcm.decrypt(nonce, ciphertext, None)
+            pt = pt.decode('utf-8')
+
+            self.conns[name][4] = False #identifies client as receiver of last message, to decide if new DH pair needed for send 
+
+            return pt
+        except Exception as e:
+            print(f"Invalid Message Detected!")
+            return None
         
 
     """def report(self, name, message):
