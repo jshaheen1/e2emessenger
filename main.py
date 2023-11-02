@@ -50,7 +50,7 @@ except:
 else:
     error("accepted certificate with incorrect signature")
 
-"""
+
 print("Testing Reporting")
 content = "inappropriate message contents"
 reportPT, reportCT = alice.report("Bob", content)
@@ -62,7 +62,7 @@ if decryptedReport != reportPT:
 else:
     print("Reporting test successful!")
 
-"""
+
 
 
 print("Testing a conversation")
