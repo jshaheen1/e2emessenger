@@ -51,7 +51,6 @@ class MessengerClient:
     def sendMessage(self, name, message):
         try:
             shared_k = self.private_k.exchange(load_pem_public_key(self.certs[name][:178], 'default_backend()')) ## move this to cert
-            shared_k = 
             k = self.symm_rat(self.server_encryption_pk, shared_k)
             self.cert[name,] = k[:255]   
             message_k = k[256:] # confirm in OH abt key length and gen
@@ -84,7 +83,7 @@ class MessengerClient:
         ct = self.enc_elgamal(name, message) 
         return ct
     
-    def enc_elgamal(self, name, message): #how to include name? A: as a tuple, pickle ####change to hashed elgamal
+    """def enc_elgamal(self, name, message): #how to include name? A: as a tuple, pickle ####change to hashed elgamal
         pk = serialization.load_pem_public_key(self.server_encryption_pk) #serialize key here
         print(pk)   #check
         for i in range(0,len(message)):
@@ -102,7 +101,7 @@ class MessengerClient:
         for i in range(0,len(ciphertext)):
             pt.append(chr(int(ciphertext[i]/sk)))
         
-        return pt
+        return pt"""
     
     def symm_rat(self, root_key, constant):
         hkdf = HKDF(
@@ -114,9 +113,3 @@ class MessengerClient:
         chain_key = hkdf.derive(constant)
         message_key = hkdf.derive(chain_key) ##????????? is this the right way????????? other options: truncating the key in half, sha-256 the key??
         return chain_key, message_key
-
-class Certificate:
-    def __init__(self, ecpk, name):
-        self.ecpk = ecpk
-        self.name = name
-        
