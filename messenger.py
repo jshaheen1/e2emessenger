@@ -14,12 +14,28 @@ class MessengerServer:
         self.server_decryption_key = server_decryption_key
 
     def decryptReport(self, ct):
-        pt = dec_elgamal(ct)
+        pt = self.dec_elgamal(ct)
         return pt
 
     def signCert(self, cert):
         signature = self.server_signing_key.sign(cert, ec.ECDSA(hashes.SHA256()))
         return signature
+
+    def dec_elgamal(self, ciphertext): 
+        u,ct = ciphertext
+        v = self.server_decryption_key.exchange(ec.ECDH(), u)
+        u_bytes = u.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        digest = hashes.Hash(hashes.SHA256())
+        digest.update(pickle.dumps(u_bytes) + pickle.dumps(v)) #U+V
+        k = digest.finalize()
+
+        aesgcm = AESGCM(k)
+        nonce = bytearray(12)
+        pt = aesgcm.decrypt(nonce, ct, None)
+        return pickle.loads(pt)
 
 class MessengerClient:
 
@@ -153,38 +169,29 @@ class MessengerClient:
         
 
     def report(self, name, message):
-        u, ct = self.enc_elgamal(name, message) 
-        return u, ct
+        ct = self.enc_elgamal(name, message) 
+        return ct
     
     def enc_elgamal(self, name, message): #how to include name? A: as a tuple, pickle ####change to hashed elgamal
         
         pt = (name,message)
         sk = ec.generate_private_key(ec.SECP256R1())
         u = sk.public_key()
-        
+        u_bytes = u.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
         h = self.server_encryption_pk
         v = sk.exchange(ec.ECDH(), h)
         digest = hashes.Hash(hashes.SHA256())
-        digest.update(pickle.loads(u) + v) #U+V
+        digest.update(pickle.dumps(u_bytes) + pickle.dumps(v)) #U+V
         k = digest.finalize()
         ##AESGCM
         aesgcm = AESGCM(k)
         nonce = bytearray(12)
-        ct = aesgcm.encrypt(nonce, pt)
+        ct = aesgcm.encrypt(nonce, pickle.dumps(pt) , None)
 
-        return u, ct
-
-    def dec_elgamal(self, u, ciphertext): 
-
-        v = self.server_encryption_sk.exchange(ec.ECDH(), u)
-        digest = hashes.Hash(hashes.SHA256())
-        digest.update(pickle.loads(u) + v) #U+V
-        k = digest.finalize()
-
-        aesgcm = AESGCM(k)
-        nonce = bytearray(12)
-        pt = aesgcm.decrypt(nonce, ciphertext)
-        return pt.name, pt.message
+        return pt, (u,ct)
 
     def symm_rat(self, root_key, constant):
         hkdf = HKDF(
