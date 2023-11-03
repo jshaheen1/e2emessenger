@@ -165,21 +165,20 @@ class MessengerClient:
         h = self.server_encryption_pk
         v = sk.exchange(ec.ECDH(), h)
         digest = hashes.Hash(hashes.SHA256())
-        digest.update(pickle.load(u) + v) #U+V
+        digest.update(pickle.loads(u) + v) #U+V
         k = digest.finalize()
         ##AESGCM
         aesgcm = AESGCM(k)
         nonce = bytearray(12)
-        ct = aesgcm.encrypt(nonce, temp)
+        ct = aesgcm.encrypt(nonce, pt)
 
         return u, ct
 
-    def dec_elgamal(self, u, ciphertext): ##use 
+    def dec_elgamal(self, u, ciphertext): 
 
-        
         v = self.server_encryption_sk.exchange(ec.ECDH(), u)
         digest = hashes.Hash(hashes.SHA256())
-        digest.update(u + v) #U+V
+        digest.update(pickle.loads(u) + v) #U+V
         k = digest.finalize()
 
         aesgcm = AESGCM(k)
